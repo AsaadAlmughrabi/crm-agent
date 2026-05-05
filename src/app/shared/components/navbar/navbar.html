@@ -1,0 +1,36 @@
+<nav>
+    <div class="navbar-container">
+          <div class="navbar-actions">
+        <button 
+            class="side-icon" 
+            [class.active]="activeIcon() === 'notification'"
+            (click)="setActiveIcon('notification')"
+            aria-label="Notifications">
+            <img src="images/notification.png" alt="Notifications" class="side-icon-image" />
+        </button>
+        
+        <button 
+            class="side-icon" 
+            [class.active]="activeIcon() === 'settings'"
+            (click)="setActiveIcon('settings')"
+            aria-label="Settings">
+            <img src="images/setting.png" alt="Settings" class="side-icon-image" />
+        </button>
+        
+        <button 
+            class="side-icon" 
+            [class.active]="activeIcon() === 'profile'"
+            (click)="setActiveIcon('profile')"
+            aria-label="Profile">
+            <img src="images/profile.png" alt="Profile" class="side-icon-image" />
+        </button>
+
+        </div>
+        <div class="navbar-logo">
+        <img src="images/logo.png" alt="ARIBA" class="logo-image" />
+        <p class="logo-text">لوحة إدارة الملفات</p>
+        </div>
+  
+      
+    </div>
+</nav>

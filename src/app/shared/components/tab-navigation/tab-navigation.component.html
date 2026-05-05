@@ -1,0 +1,18 @@
+<div class="tab-navigation">
+  @for (tab of tabs(); track tab.id) {
+  <div class="tab-wrapper">
+    <button
+      class="tab-button"
+      [class.active]="activeTab() === tab.id"
+      (click)="onTabClick(tab.id)"
+    >
+      <img 
+        [src]="activeTab() === tab.id ? tab.activeIcon : tab.icon" 
+        [alt]="tab.label" 
+        class="tab-icon" 
+      />
+      {{ tab.label }}
+    </button>
+  </div>
+  }
+</div>

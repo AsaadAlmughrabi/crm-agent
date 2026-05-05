@@ -1,0 +1,87 @@
+<div class="chatbot-container">
+  <!-- Chat Header -->
+  <div class="chatbot-header">
+    <div class="header-content">
+      <div class="bot-avatar">
+        <img src="/images/agent.png" alt="AI Bot Avatar" class="bot-avatar-image">
+      </div>
+        <h3>مساعدك الآلي</h3>
+    </div>
+  </div>
+
+  <!-- Chat Messages -->
+  <div class="chat-messages">
+    @if (chatMessages().length === 0) {
+    <div class="empty-chat">
+      <i class="fas fa-comments"></i>
+      <p>ابدأ محادثة مع المساعد الذكي</p>
+      <small>اسأل أسئلة حول بياناتك واحصل على رؤى</small>
+    </div>
+    } @for (message of chatMessages(); track message.id) {
+    <div class="message-wrapper" [class.user]="message.role === 'user'">
+      @if (message.role === 'assistant') {
+      <div class="message-avatar">
+        <img src="/images/agent.png" alt="AI Bot" class="avatar-image">
+      </div>
+      }
+      <div class="message-bubble" [class.user]="message.role === 'user'">
+        <div class="message-content">
+          @if (message.role === 'assistant') {
+          <markdown [data]="message.content"></markdown>
+          } @else {
+          {{ message.content }}
+          }
+        </div>
+      </div>
+      @if (message.role === 'user') {
+      <div class="message-avatar user">
+       <img src="/images/profile.png" alt="User Avatar" class="avatar-image">
+      </div>
+      }
+    </div>
+    }
+
+    <!-- Typing Indicator -->
+    @if (isTyping()) {
+    <div class="message-wrapper">
+      <div class="message-avatar">
+        <img src="/images/agent.png" alt="AI Bot" class="avatar-image">
+      </div>
+      <div class="message-bubble typing">
+        <div class="typing-indicator">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+
+  <!-- Chat Error -->
+  @if (chatError()) {
+  <div class="chat-error">
+    <img src="/images/warniing.png" alt="Warning" class="error-icon">
+    {{ chatError() }}
+  </div>
+  }
+
+  <!-- Chat Input -->
+  <div class="chat-input-container">
+    <textarea
+      class="chat-input"
+      [(ngModel)]="chatInput"
+      (keydown)="onChatInputKeyPress($event)"
+      placeholder="اكتب رسالتك هنا..."
+      rows="2"
+      [disabled]="isTyping()"
+    ></textarea>
+    <button
+      class="send-button"
+      (click)="sendChatMessage()"
+      [disabled]="!chatInput().trim() || isTyping()"
+    >
+    <img src="/images/arrow.png" alt="Send" class="send-icon">
+    </button>
+  </div>
+</div>

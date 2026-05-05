@@ -1,0 +1,122 @@
+.upload-tab {
+  max-width: 50rem;
+  margin: 0 auto;
+}
+
+.upload-area {
+  border: 0.15rem dashed var(--color-gray-60);
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  background: var(--color-surface);
+}
+
+.upload-area:hover:not(.disabled):not(.uploading) {
+  border-color: var(--color-spring-green);
+  background: var(--color-green-background);
+}
+
+.upload-area.drag-over {
+  border-color: var(--color-spring-green);
+  background: #eef2ff;
+  transform: scale(1.02);
+}
+
+.upload-area.uploading,
+.upload-area.disabled {
+  cursor: not-allowed;
+  border: 0.15rem solid var(--color-gray-60);
+  opacity: 0.8;
+}
+
+.upload-icon {
+
+  margin: 0 auto ;
+  margin-bottom: 1rem;
+}
+.uploadImg{
+    width: 4rem;
+    height: 4rem;
+}
+
+.spinner-large {
+  width: 3.2rem;
+  height: 3.2rem;
+  border: 4px solid var(--color-gray-96);
+  border-top-color: var(--color-spring-green);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.upload-text {
+  font-size: 1.5rem;
+  color: var(--color-gray-90);
+  margin-bottom: 0.75rem;
+  font-weight: 700;
+  direction: rtl;
+  text-align: center;
+
+}
+
+.upload-hint {
+  font-size: 1rem;
+  color: var(--color-gray-60);
+  font-weight: 500;
+  direction: rtl;
+  text-align: center;
+  margin-bottom: 0;
+}
+
+.file-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.file-input:disabled {
+  cursor: not-allowed;
+}
+
+.message {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  direction: rtl;
+  text-align: right;
+}
+
+.error-message {
+  background: #fef2f2;
+  color: var(--color-error);
+  border: 1px solid var(--color--error-light);
+}
+
+.success-message {
+  background: #f0fdf4;
+  color: var(--color-spring-green);
+  border: 1px solid var(--color-green-light);
+}
+
+.message i {
+  font-size: 1.25rem;
+}
+
+@media (max-width: 1024px) {
+  .upload-text {
+    font-size: 14px;
+  }
+}

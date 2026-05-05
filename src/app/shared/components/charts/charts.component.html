@@ -1,0 +1,375 @@
+<div class="charts-tab">
+  @if (dataError) {
+  <div class="empty-state">
+    <i class="fas fa-exclamation-triangle"></i>
+    <h3>غير قادر على تحميل البيانات</h3>
+    <p>{{ dataError }}</p>
+  </div>
+  } @else if (!chartsData) {
+  <div class="empty-state">
+    <img src="/images/charts.png" alt="Charts Icon" class="charts-icon">
+    <h3>لا توجد بيانات للرسوم البيانية</h3>
+    <p>يرجى تحميل ملف لعرض الرسوم البيانية والإحصائيات.</p>
+  </div>
+  } @else {
+  <!-- Charts Section - Show immediately, each component handles its own loading -->
+  <div class="charts-section">
+    <h2>لوحة معلومات الطلبات</h2>
+
+    <!-- Summary Cards from new API -->
+     <div class="stats-summary">
+      @if (isLoadingSummary()) {
+      <div class="stat-card loading">
+        <div class="spinner"></div>
+      </div>
+      <div class="stat-card loading">
+        <div class="spinner"></div>
+      </div>
+      <div class="stat-card loading">
+        <div class="spinner"></div>
+      </div>
+      <div class="stat-card loading">
+        <div class="spinner"></div>
+      </div>
+      } @else if (chartsData?.summary) {
+      <div class="stat-card">
+        <div class="stat-icon blue">
+          <i class="fas fa-database"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ chartsData?.summary?.total_challenges?.toLocaleString() || '0' }}</h3>
+          <p>إجمالي الطلبات</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon green">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ chartsData?.summary?.closed_challenges?.toLocaleString() || '0' }}</h3>
+          <p>الطلبات المغلقة</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon orange">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ chartsData?.summary?.processing_challenges?.toLocaleString() || '0' }}</h3>
+          <p>قيد المعالجة</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon purple">
+          <i class="fas fa-percentage"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ chartsData?.summary?.closed_percentage || '0' }}%</h3>
+          <p>نسبة الإغلاق</p>
+        </div>
+      </div>
+      }
+    </div> 
+
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3 data-tooltip="Case Origin Sector">
+           توزيع الحالات حسب قطاع المنشأ
+        </h3>
+        @if (isLoadingCaseOriginSector()) {
+        <div class="chart-loader">
+          <div class="spinner"></div>
+          <p>جاري التحميل...</p>
+        </div>
+        }
+        <div class="chart-wrapper">
+          <canvas #caseOriginSectorChart [class.hidden]="isLoadingCaseOriginSector()"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h3 data-tooltip="Case Type">تصنيف الحالات حسب النوع</h3>
+        @if (isLoadingByType()) {
+        <div class="chart-loader">
+          <div class="spinner"></div>
+          <p>جاري التحميل...</p>
+        </div>
+        }
+        <div class="chart-wrapper">
+          <canvas #challengesByTypeChart [class.hidden]="isLoadingByType()"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h3 data-tooltip="Status by Channel Source">
+          حالة الطلبات حسب القناة
+        </h3>
+        @if (isLoadingByChannel()) {
+        <div class="chart-loader">
+          <div class="spinner"></div>
+          <p>جاري التحميل...</p>
+        </div>
+        }
+        <div class="chart-wrapper">
+          <canvas #challengesByChannelChart [class.hidden]="isLoadingByChannel()"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h3 data-tooltip="Main Category">توزيع الخدمات الرئيسية</h3>
+        @if (isLoadingMainServices()) {
+        <div class="chart-loader">
+          <div class="spinner"></div>
+          <p>جاري التحميل...</p>
+        </div>
+        }
+        <div class="chart-wrapper">
+          <canvas #mainServicesChart [class.hidden]="isLoadingMainServices()"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h3 data-tooltip="Channel Source">إجمالي الطلبات حسب القناة</h3>
+        @if (isLoadingFacilities()) {
+        <div class="chart-loader">
+          <div class="spinner"></div>
+          <p>جاري التحميل...</p>
+        </div>
+        }
+        <div class="chart-wrapper">
+          <canvas #facilitiesChart [class.hidden]="isLoadingFacilities()"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monthly Challenges Table -->
+    <div class="table-card">
+      <h3 data-tooltip="Owner">
+       الطلبات الشهرية حسب القناة
+      </h3>
+
+      @if (isLoadingMonthly()) {
+      <div class="table-loader">
+        <div class="spinner"></div>
+        <p>جاري التحميل...</p>
+      </div>
+      } @else { @if (getAvailableMonths().length > 0) {
+      <!-- Month Tabs -->
+      <div class="month-tabs">
+        @for (month of getAvailableMonths(); track month) {
+        <button class="month-tab" [class.active]="selectedMonth() === month" (click)="selectMonth(month)">
+          {{ month }}
+        </button>
+        }
+      </div>
+
+      <!-- Monthly Data Table -->
+      <div class="table-wrapper" [class.scrollable]="monthlyTableExpanded()">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>الطلبات المفتوحة</th>
+              <th>القناة</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of getLimitedMonthlyData(); track item.Owner) {
+            <tr>
+              <td>{{ item.opened_challenges?.toLocaleString() || 0 }}</td>
+              <td>{{ item.Owner }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (hasMoreMonthlyRecords()) {
+      <button class="view-more-btn" (click)="expandMonthlyTable()">
+        <i class="fas fa-chevron-down"></i> عرض الكل ({{ getMonthlyData().length }} سجل)
+      </button>
+      } } }
+    </div>
+
+    <!-- Challenges by Owner Table -->
+    <div class="table-card">
+      <h3 data-tooltip="Owner"> الطلبات حسب القناة</h3>
+      @if (isLoadingByOwner()) {
+      <div class="table-loader">
+        <div class="spinner"></div>
+        <p>جاري التحميل...</p>
+      </div>
+      } @else {
+      <div class="table-wrapper" [class.scrollable]="ownerTableExpanded()">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>الإجمالي</th>
+              <th>مغلقة</th>
+              <th>قيد المعالجة</th>
+              <th>متكررة</th>
+              <th>غير مغلقة</th>
+              <th>القناة</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of getLimitedOwnerData(); track item.Owner) {
+            <tr>
+              <td>{{ item.total_challenges?.toLocaleString() || 0 }}</td>
+              <td>{{ item.closed_challenges?.toLocaleString() || 0 }}</td>
+              <td>{{ item.processing_challenges?.toLocaleString() || 0 }}</td>
+              <td>
+                <span class="repeated-badge" [class.has-repeated]="item.repeated_challenges > 0">
+                  {{ item.repeated_challenges?.toLocaleString() || 0 }}
+                </span>
+              </td>
+              <td>{{ item.notClosed_challenges?.toLocaleString() || 0 }}</td>
+              <td>{{ item.Owner }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (hasMoreOwnerRecords()) {
+      <button class="view-more-btn" (click)="expandOwnerTable()">
+        <i class="fas fa-chevron-down"></i> عرض الكل ({{ chartsData?.byOwner?.data?.length || 0 }} سجل)
+      </button>
+      } }
+    </div>
+
+    <!-- Sub-Services Table -->
+    <div class="table-card">
+      <h3 data-tooltip="Sub Category">
+        توزيع الحالات
+      </h3>
+      @if (isLoadingSubServices()) {
+      <div class="table-loader">
+        <div class="spinner"></div>
+        <p>جاري التحميل...</p>
+      </div>
+      } @else {
+      <div class="table-wrapper" [class.scrollable]="subServicesTableExpanded()">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>العدد</th>
+              <th>النسبة المئوية</th>
+              <th>اسم الخدمة</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of getLimitedSubServicesData(); track item.status) {
+            <tr>
+              <td>{{ item.count?.toLocaleString() || 0 }}</td>
+              <td>
+                <div class="progress-cell">
+                  <div class="progress-bar">
+                    <div class="progress-fill" [style.width.%]="(item.count / chartsData?.summary?.total_challenges) * 100"></div>
+                  </div>
+                  <span> {{ ((item.count / chartsData?.summary?.total_challenges) * 100).toFixed(1) }}% </span>
+                </div>
+              </td>
+              <td>{{ item.status }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (hasMoreSubServicesRecords()) {
+      <button class="view-more-btn" (click)="expandSubServicesTable()">
+        <i class="fas fa-chevron-down"></i> عرض الكل ({{ chartsData?.subServices?.length || 0 }} سجل)
+      </button>
+      } }
+    </div>
+
+    <!-- Completion Days Table -->
+    <div class="table-card">
+      <h3 data-tooltip="Owner"> متوسط أيام الإنجاز حسب القناة</h3>
+      @if (isLoadingCompletionDays()) {
+      <div class="table-loader">
+        <div class="spinner"></div>
+        <p>جاري التحميل...</p>
+      </div>
+      } @else {
+      <div class="table-wrapper" [class.scrollable]="completionDaysTableExpanded()">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>متوسط الأيام</th>
+              <th>إجمالي المحلول</th>
+              <th>القناة</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of getLimitedCompletionDaysData(); track item.Owner) {
+            <tr>
+              <td>
+                <span class="days-badge">{{ item.avg_days }}</span>
+              </td>
+              <td>{{ item.total_solved }}</td>
+              <td>{{ item.Owner }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (hasMoreCompletionDaysRecords()) {
+      <button class="view-more-btn" (click)="expandCompletionDaysTable()">
+        <i class="fas fa-chevron-down"></i> عرض الكل ({{ chartsData?.completionDays?.completion_data?.length || 0 }} سجل)
+      </button>
+      } }
+    </div>
+
+    <!-- Status Completion Days Table with Analysis -->
+    <!-- Commented out: تحليل أيام إنجاز الحالات -->
+    <!-- <div class="table-card full-width">
+      <h3 data-tooltip="case number">
+       تحليل أيام إنجاز الحالات
+      </h3>
+      @if (isLoadingStatusCompletionDays()) {
+      <div class="table-loader">
+        <div class="spinner"></div>
+        <p>جاري التحميل...</p>
+      </div>
+      } @else {
+      <div class="table-wrapper" [class.scrollable]="statusCompletionDaysTableExpanded()">
+        <table class="data-table analysis-table">
+          <thead>
+            <tr>
+              <th>أيام الإنجاز</th>
+              <th>التحليل</th>
+              <th>رقم الحالة</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of getLimitedStatusCompletionDaysData(); track $index) {
+            <tr>
+              <td>
+                <span class="completion-days-badge"> {{ item.completion_days[0] }} يوم </span>
+              </td>
+              <td class="analysis-cell">
+                <div class="analysis-text">{{ item.analysis }}</div>
+              </td>
+              <td class="status-number">{{ item.case_number }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (hasMoreStatusCompletionDaysRecords()) {
+      <button class="view-more-btn" (click)="expandStatusCompletionDaysTable()">
+        <i class="fas fa-chevron-down"></i> عرض الكل ({{ chartsData?.statusCompletionDays?.length || 0 }} سجل)
+      </button>
+      } }
+    </div> -->
+  </div>
+  }
+</div>
+

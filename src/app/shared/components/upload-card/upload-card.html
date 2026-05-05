@@ -1,0 +1,52 @@
+<div class="upload-tab">
+  <div
+    class="upload-area"
+    [class.drag-over]="isDragOver()"
+    [class.uploading]="isUploading() || isProcessing()"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+  >
+    @if (isUploading()) {
+    <div class="upload-icon uploading">
+      <div class="spinner-large"></div>
+    </div>
+    <p class="upload-text">جارٍ رفع الملف...</p>
+    <p class="upload-hint">قد يستغرق هذا بضع لحظات</p>
+    } @else if (isProcessing()) {
+    <div class="upload-icon uploading">
+      <div class="spinner-large"></div>
+    </div>
+    <p class="upload-text">جارٍ معالجة البيانات...</p>
+    <p class="upload-hint">قد يستغرق هذا بضع لحظات</p>
+    } @else {
+    <div class="upload-icon">
+      <img src="/images/upload.png" alt="Upload Icon" class="uploadImg">
+    </div>
+
+    <p class="upload-text">اسحب ملفك وأفلته هنا أو اضغط لرفع ملف.</p>
+    <p class="upload-hint">ملفات Excel فقط (.xlsx، .xls)</p>
+
+    <input
+      type="file"
+      class="file-input"
+      accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      (change)="onFileChange($event)"
+      [disabled]="isUploading() || isProcessing()"
+    />
+    }
+  </div>
+
+  <!-- Upload Messages (Errors and Success only) -->
+  @if (uploadError()) {
+  <div class="message error-message">
+    <i class="fas fa-exclamation-circle"></i>
+    {{ uploadError() }}
+  </div>
+  } @else if (uploadSuccess()) {
+  <div class="message success-message">
+    <i class="fas fa-check-circle"></i>
+    {{ uploadSuccess() }}
+  </div>
+  }
+</div>

@@ -1,0 +1,45 @@
+<!-- Main Dashboard Layout: Tabs | Chat -->
+<div class="dashboard-container">
+  <!-- Left Panel: Tabs (Upload, Charts) -->
+  <div class="left-panel">
+    <!-- Tab Navigation -->
+    <app-tab-navigation
+      [activeTab]="activeTab()"
+      (tabChange)="switchTab($event)"
+      class="tab-navigation"
+    />
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+      <!-- UPLOAD TAB -->
+      @if (activeTab() === 'upload') {
+      <app-upload-card
+        [isUploading]="analysisService.isUploading()"
+        [isProcessing]="isProcessingData()"
+        [isDragOver]="isDragOver()"
+        [uploadError]="uploadError()"
+        [uploadSuccess]="uploadSuccess()"
+        (fileSelected)="handleFileSelected($event)"
+        (dragOver)="onDragOver($event)"
+        (dragLeave)="onDragLeave($event)"
+        (drop)="onDrop($event)"
+      />
+      }
+
+      <!-- CHARTS TAB -->
+      @if (activeTab() === 'charts') {
+      <app-charts [chartsData]="chartsData()" [dataError]="dataError()" />
+      }
+    </div>
+  </div>
+
+  <!-- Right Panel: Chat -->
+  <div class="right-panel">
+    <app-chat
+      [chatMessages]="chatMessages()"
+      [isTyping]="isTyping()"
+      [chatError]="chatError()"
+      (sendMessage)="handleChatMessage($event)"
+    />
+  </div>
+</div>
