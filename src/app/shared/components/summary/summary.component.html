@@ -1,0 +1,30 @@
+<div class="summary-tab">
+  @if (summaryError) {
+  <div class="empty-state">
+    <i class="fas fa-exclamation-circle"></i>
+    <h3>تعذر تحميل التقرير</h3>
+    <p>{{ summaryError }}</p>
+  </div>
+  } @else if (summary) {
+  <div class="summary-card">
+    <div class="summary-header">
+      <h2>{{ title }}</h2>
+    </div>
+    <div class="summary-content">
+      <markdown [data]="summary"></markdown>
+    </div>
+  </div>
+  } @else if (isLoading) {
+  <div class="loading-state">
+    <div class="spinner-large"></div>
+    <p class="loading-text">{{ loadingMessage }}</p>
+    <p class="loading-hint">قد يستغرق هذا بضع لحظات</p>
+  </div>
+  } @else {
+  <div class="empty-state">
+    <img src="/images/summary.png" alt="summary Icon" class="summary-icon">
+    <h3>{{ emptyTitle }}</h3>
+    <p>{{ emptyMessage }}</p>
+  </div>
+  }
+</div>
