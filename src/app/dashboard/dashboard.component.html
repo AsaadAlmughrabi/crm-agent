@@ -30,6 +30,32 @@
       @if (activeTab() === 'charts') {
       <app-charts [chartsData]="chartsData()" [dataError]="dataError()" />
       }
+
+      <!-- SUMMARY TAB -->
+      @if (activeTab() === 'summary') {
+      <app-summary
+        [summary]="summaryReport()"
+        [summaryError]="summaryError()"
+        [isLoading]="isLoadingSummaryReport()"
+        title="ملخص الملف"
+        emptyTitle="لا يوجد ملخص متاح"
+        emptyMessage="قم بتحميل ملف لإنشاء تقرير الملخص."
+        loadingMessage="جارٍ تحميل الملخص..."
+      />
+      }
+
+      <!-- PREDICTION TAB -->
+      @if (activeTab() === 'prediction') {
+      <app-summary
+        [summary]="predictionReport()"
+        [summaryError]="predictionError()"
+        [isLoading]="isLoadingPrediction()"
+        title="تقرير التنبؤ"
+        emptyTitle="لا يوجد تنبؤ متاح"
+        emptyMessage="قم بتحميل ملف لإنشاء تقرير التنبؤ."
+        loadingMessage="جارٍ تحميل تقرير التنبؤ..."
+      />
+      }
     </div>
   </div>
 

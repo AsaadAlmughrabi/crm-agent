@@ -19,6 +19,7 @@ import { UploadCard } from '../shared/components/upload-card/upload-card';
 import { ChatComponent } from '../shared/components/chat/chat.component';
 import { TabNavigationComponent } from '../shared/components/tab-navigation/tab-navigation.component';
 import { ChartsComponent } from '../shared/components/charts/charts.component';
+import { SummaryComponent } from '../shared/components/summary/summary.component';
 import type { TabType } from '../shared/components/tab-navigation/tab-navigation.component';
 
 Chart.register(...registerables);
@@ -40,6 +41,7 @@ Chart.register(...registerables);
     ChatComponent,
     TabNavigationComponent,
     ChartsComponent,
+    SummaryComponent,
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
@@ -105,6 +107,16 @@ export class DashboardComponent implements OnInit, AfterViewInit, AfterViewCheck
   isTyping = signal(false);
   chatError = signal<string | null>(null);
 
+  // Summary state (chat-based with fixed prompt)
+  summaryReport = signal<string | null>(null);
+  isLoadingSummaryReport = signal(false);
+  summaryError = signal<string | null>(null);
+
+  // Prediction state (chat-based with fixed prompt)
+  predictionReport = signal<string | null>(null);
+  isLoadingPrediction = signal(false);
+  predictionError = signal<string | null>(null);
+
   constructor(
     protected analysisService: AnalysisService,
     protected chartsService: ChartsService,
@@ -150,6 +162,54 @@ export class DashboardComponent implements OnInit, AfterViewInit, AfterViewCheck
         this.chartsInitialized.set(true);
       }, 100);
     }
+  }
+
+  /**
+   * Load summary via chat with fixed prompt
+   */
+  loadSummary(): void {
+    this.isLoadingSummaryReport.set(true);
+    this.summaryError.set(null);
+
+    this.analysisService.getSummary().subscribe({
+      next: (response) => {
+        const content = response.output || response.response;
+        if (content) {
+          this.summaryReport.set(content);
+        } else {
+          this.summaryError.set('فشل الحصول على رد صالح من الخادم.');
+        }
+        this.isLoadingSummaryReport.set(false);
+      },
+      error: () => {
+        this.summaryError.set('تعذر تحميل الملخص. يرجى المحاولة مرة أخرى.');
+        this.isLoadingSummaryReport.set(false);
+      },
+    });
+  }
+
+  /**
+   * Load prediction via chat with fixed prompt
+   */
+  loadPrediction(): void {
+    this.isLoadingPrediction.set(true);
+    this.predictionError.set(null);
+
+    this.analysisService.getPrediction().subscribe({
+      next: (response) => {
+        const content = response.output || response.response;
+        if (content) {
+          this.predictionReport.set(content);
+        } else {
+          this.predictionError.set('فشل الحصول على رد صالح من الخادم.');
+        }
+        this.isLoadingPrediction.set(false);
+      },
+      error: () => {
+        this.predictionError.set('تعذر تحميل التنبؤ. يرجى المحاولة مرة أخرى.');
+        this.isLoadingPrediction.set(false);
+      },
+    });
   }
 
   /**
@@ -376,11 +436,19 @@ export class DashboardComponent implements OnInit, AfterViewInit, AfterViewCheck
     this.clearUploadMessages();
     this.uploadedFileName.set(file.name);
 
+    // Reset previous summary/prediction so fresh data triggers a new load
+    this.summaryReport.set(null);
+    this.summaryError.set(null);
+    this.predictionReport.set(null);
+    this.predictionError.set(null);
+
     this.analysisService.uploadFile(file).subscribe({
       next: () => {
         this.isProcessingData.set(true);
-        // Load charts data immediately, then route to charts tab
+        // Load charts, summary, and prediction in parallel so tabs are ready
         this.loadChartsData();
+        this.loadSummary();
+        this.loadPrediction();
         this.isProcessingData.set(false);
         this.activeTab.set('charts');
         this.cdr.detectChanges();
