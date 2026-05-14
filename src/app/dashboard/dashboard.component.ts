@@ -12,6 +12,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
 import { MarkdownModule } from 'ngx-markdown';
+import { catchError, finalize, forkJoin, map, Observable, of, tap } from 'rxjs';
 import { AnalysisService, ChatMessage } from '../core/services/analysis.service';
 import { ChartsService } from '../core/services/charts.service';
 import { ToastService } from '../core/services/toast.service';
@@ -165,220 +166,174 @@ export class DashboardComponent implements OnInit, AfterViewInit, AfterViewCheck
   }
 
   /**
-   * Load summary via chat with fixed prompt
+   * Load summary from backend computed report endpoint
    */
-  loadSummary(): void {
+  loadSummary(): Observable<boolean> {
     this.isLoadingSummaryReport.set(true);
     this.summaryError.set(null);
 
-    this.analysisService.getSummary().subscribe({
-      next: (response) => {
-        const content = response.output || response.response;
+    return this.analysisService.getSummary().pipe(
+      tap((response) => {
+        const content = response.summary_report;
         if (content) {
           this.summaryReport.set(content);
         } else {
           this.summaryError.set('فشل الحصول على رد صالح من الخادم.');
         }
-        this.isLoadingSummaryReport.set(false);
-      },
-      error: () => {
+      }),
+      map(() => true),
+      catchError(() => {
         this.summaryError.set('تعذر تحميل الملخص. يرجى المحاولة مرة أخرى.');
+        return of(false);
+      }),
+      finalize(() => {
         this.isLoadingSummaryReport.set(false);
-      },
-    });
+      })
+    );
   }
 
   /**
-   * Load prediction via chat with fixed prompt
+   * Load prediction from backend report endpoint
    */
-  loadPrediction(): void {
+  loadPrediction(): Observable<boolean> {
     this.isLoadingPrediction.set(true);
     this.predictionError.set(null);
 
-    this.analysisService.getPrediction().subscribe({
-      next: (response) => {
-        const content = response.output || response.response;
+    return this.analysisService.getPrediction().pipe(
+      tap((response) => {
+        const content = response.prediction_report;
+        const summaryContent = response.summary_report;
         if (content) {
           this.predictionReport.set(content);
+          if (summaryContent) {
+            this.summaryReport.set(summaryContent);
+            this.summaryError.set(null);
+          }
         } else {
           this.predictionError.set('فشل الحصول على رد صالح من الخادم.');
         }
-        this.isLoadingPrediction.set(false);
-      },
-      error: () => {
+      }),
+      map(() => true),
+      catchError(() => {
         this.predictionError.set('تعذر تحميل التنبؤ. يرجى المحاولة مرة أخرى.');
+        return of(false);
+      }),
+      finalize(() => {
         this.isLoadingPrediction.set(false);
-      },
-    });
+      })
+    );
   }
 
   /**
-   * Load charts data from API - load each independently
+   * Load charts data from API and keep processing on the frontend until all calls finish
    */
-  loadChartsData(): void {
+  loadChartsData(): Observable<boolean> {
     this.isLoadingData.set(true);
     this.dataError.set(null);
 
-    let completedRequests = 0;
-    const totalRequests = 10;
-
-    const checkAllLoaded = () => {
-      completedRequests++;
-      if (completedRequests === totalRequests) {
-        this.isLoadingData.set(false);
-      }
+    const loadSection = <T>(
+      request$: Observable<T>,
+      setLoading: (value: boolean) => void,
+      onSuccess: (data: T) => void
+    ): Observable<T | null> => {
+      setLoading(true);
+      return request$.pipe(
+        tap((data) => onSuccess(data)),
+        catchError(() => of(null)),
+        finalize(() => setLoading(false))
+      );
     };
 
-    this.isLoadingSummary.set(true);
-    this.chartsService.getChallengesSummary().subscribe({
-      next: (data) => {
-        this.chartsData.update((current) => ({ ...current, summary: data }));
-        this.isLoadingSummary.set(false);
-        checkAllLoaded();
-      },
-      error: () => {
-        this.isLoadingSummary.set(false);
-        checkAllLoaded();
-      },
-    });
-
-    this.isLoadingByChannel.set(true);
-    this.chartsService.getChallengesByChannel('Channel Source').subscribe({
-      next: (data) => {
-        this.chartsData.update((current) => ({ ...current, byChannel: data }));
-        this.isLoadingByChannel.set(false);
-        if (data && this.challengesByChannelChartRef) {
-          setTimeout(() => this.createChallengesByChannelChart(data), 50);
-        }
-        checkAllLoaded();
-      },
-      error: () => {
-        this.isLoadingByChannel.set(false);
-        checkAllLoaded();
-      },
-    });
-
-    this.isLoadingMonthly.set(true);
-    this.chartsService.getMonthlyChallenges('Owner').subscribe({
-      next: (data) => {
-        this.chartsData.update((current) => ({ ...current, monthly: data }));
-        this.isLoadingMonthly.set(false);
-        if (data && !this.selectedMonth()) {
-          const months = Object.keys(data).sort();
-          if (months.length > 0) {
-            this.selectedMonth.set(months[months.length - 1]);
+    return forkJoin({
+      summary: loadSection(
+        this.chartsService.getChallengesSummary(),
+        (value) => this.isLoadingSummary.set(value),
+        (data) => this.chartsData.update((current) => ({ ...current, summary: data }))
+      ),
+      byChannel: loadSection(
+        this.chartsService.getChallengesByChannel('Channel Source'),
+        (value) => this.isLoadingByChannel.set(value),
+        (data) => {
+          this.chartsData.update((current) => ({ ...current, byChannel: data }));
+          if (this.challengesByChannelChartRef) {
+            setTimeout(() => this.createChallengesByChannelChart(data), 50);
           }
         }
-        checkAllLoaded();
-      },
-      error: () => {
-        this.isLoadingMonthly.set(false);
-        checkAllLoaded();
-      },
-    });
-
-    this.isLoadingByType.set(true);
-    this.chartsService.getChallengesByType().subscribe({
-      next: (data) => {
-        this.chartsData.update((current) => ({ ...current, byType: data }));
-        this.isLoadingByType.set(false);
-        if (data && this.challengesByTypeChartRef) {
-          setTimeout(() => this.createChallengesByTypeChart(data), 50);
+      ),
+      monthly: loadSection(
+        this.chartsService.getMonthlyChallenges('Owner'),
+        (value) => this.isLoadingMonthly.set(value),
+        (data) => {
+          this.chartsData.update((current) => ({ ...current, monthly: data }));
+          if (!this.selectedMonth()) {
+            const months = Object.keys(data).sort();
+            if (months.length > 0) {
+              this.selectedMonth.set(months[months.length - 1]);
+            }
+          }
         }
-        checkAllLoaded();
-      },
-      error: () => {
-        this.isLoadingByType.set(false);
-        checkAllLoaded();
-      },
-    });
-
-    this.isLoadingByOwner.set(true);
-    this.chartsService.getChallengesByOwner('Owner').subscribe({
-      next: (data) => {
-        this.chartsData.update((current) => ({ ...current, byOwner: data }));
-        this.isLoadingByOwner.set(false);
-        checkAllLoaded();
-      },
-      error: () => {
-        this.isLoadingByOwner.set(false);
-        checkAllLoaded();
-      },
-    });
-
-    this.isLoadingMainServices.set(true);
-    this.chartsService.getMainServices('Main Category').subscribe({
-      next: (data) => {
-        this.chartsData.update((current) => ({ ...current, mainServices: data }));
-        this.isLoadingMainServices.set(false);
-        if (data && this.mainServicesChartRef) {
-          setTimeout(() => this.createMainServicesChart(data), 50);
+      ),
+      byType: loadSection(
+        this.chartsService.getChallengesByType(),
+        (value) => this.isLoadingByType.set(value),
+        (data) => {
+          this.chartsData.update((current) => ({ ...current, byType: data }));
+          if (this.challengesByTypeChartRef) {
+            setTimeout(() => this.createChallengesByTypeChart(data), 50);
+          }
         }
-        checkAllLoaded();
-      },
-      error: () => {
-        this.isLoadingMainServices.set(false);
-        checkAllLoaded();
-      },
-    });
-
-    this.isLoadingSubServices.set(true);
-    this.chartsService.getSubServices('Sub Category').subscribe({
-      next: (data) => {
-        this.chartsData.update((current) => ({ ...current, subServices: data }));
-        this.isLoadingSubServices.set(false);
-        checkAllLoaded();
-      },
-      error: () => {
-        this.isLoadingSubServices.set(false);
-        checkAllLoaded();
-      },
-    });
-
-    this.isLoadingFacilities.set(true);
-    this.chartsService.getFacilities('Channel Source').subscribe({
-      next: (data) => {
-        this.chartsData.update((current) => ({ ...current, facilities: data }));
-        this.isLoadingFacilities.set(false);
-        if (data && this.facilitiesChartRef) {
-          setTimeout(() => this.createFacilitiesChart(data), 50);
+      ),
+      byOwner: loadSection(
+        this.chartsService.getChallengesByOwner('Owner'),
+        (value) => this.isLoadingByOwner.set(value),
+        (data) => this.chartsData.update((current) => ({ ...current, byOwner: data }))
+      ),
+      mainServices: loadSection(
+        this.chartsService.getMainServices('Main Category'),
+        (value) => this.isLoadingMainServices.set(value),
+        (data) => {
+          this.chartsData.update((current) => ({ ...current, mainServices: data }));
+          if (this.mainServicesChartRef) {
+            setTimeout(() => this.createMainServicesChart(data), 50);
+          }
         }
-        checkAllLoaded();
-      },
-      error: () => {
-        this.isLoadingFacilities.set(false);
-        checkAllLoaded();
-      },
-    });
-
-    this.isLoadingCaseOriginSector.set(true);
-    this.chartsService.getCaseOriginSector().subscribe({
-      next: (data) => {
-        this.chartsData.update((current) => ({ ...current, caseOriginSector: data }));
-        this.isLoadingCaseOriginSector.set(false);
-        if (data && this.caseOriginSectorChartRef) {
-          setTimeout(() => this.createCaseOriginSectorChart(data), 50);
+      ),
+      subServices: loadSection(
+        this.chartsService.getSubServices('Sub Category'),
+        (value) => this.isLoadingSubServices.set(value),
+        (data) => this.chartsData.update((current) => ({ ...current, subServices: data }))
+      ),
+      facilities: loadSection(
+        this.chartsService.getFacilities('Channel Source'),
+        (value) => this.isLoadingFacilities.set(value),
+        (data) => {
+          this.chartsData.update((current) => ({ ...current, facilities: data }));
+          if (this.facilitiesChartRef) {
+            setTimeout(() => this.createFacilitiesChart(data), 50);
+          }
         }
-        checkAllLoaded();
-      },
-      error: () => {
-        this.isLoadingCaseOriginSector.set(false);
-        checkAllLoaded();
-      },
-    });
-
-    this.isLoadingCompletionDays.set(true);
-    this.chartsService.getChallengesCompletionDays('Owner').subscribe({
-      next: (data) => {
-        this.chartsData.update((current) => ({ ...current, completionDays: data }));
-        this.isLoadingCompletionDays.set(false);
-        checkAllLoaded();
-      },
-      error: () => {
-        this.isLoadingCompletionDays.set(false);
-        checkAllLoaded();
-      },
-    });
+      ),
+      caseOriginSector: loadSection(
+        this.chartsService.getCaseOriginSector(),
+        (value) => this.isLoadingCaseOriginSector.set(value),
+        (data) => {
+          this.chartsData.update((current) => ({ ...current, caseOriginSector: data }));
+          if (this.caseOriginSectorChartRef) {
+            setTimeout(() => this.createCaseOriginSectorChart(data), 50);
+          }
+        }
+      ),
+      completionDays: loadSection(
+        this.chartsService.getChallengesCompletionDays('Owner'),
+        (value) => this.isLoadingCompletionDays.set(value),
+        (data) => this.chartsData.update((current) => ({ ...current, completionDays: data }))
+      ),
+    }).pipe(
+      map(() => true),
+      finalize(() => {
+        this.isLoadingData.set(false);
+      })
+    );
   }
 
   // ==================== UPLOAD TAB METHODS ====================
@@ -435,6 +390,10 @@ export class DashboardComponent implements OnInit, AfterViewInit, AfterViewCheck
 
     this.clearUploadMessages();
     this.uploadedFileName.set(file.name);
+    this.isProcessingData.set(false);
+    this.chartsData.set({});
+    this.chartsInitialized.set(false);
+    this.selectedMonth.set(null);
 
     // Reset previous summary/prediction so fresh data triggers a new load
     this.summaryReport.set(null);
@@ -445,13 +404,22 @@ export class DashboardComponent implements OnInit, AfterViewInit, AfterViewCheck
     this.analysisService.uploadFile(file).subscribe({
       next: () => {
         this.isProcessingData.set(true);
-        // Load charts, summary, and prediction in parallel so tabs are ready
-        this.loadChartsData();
-        this.loadSummary();
-        this.loadPrediction();
-        this.isProcessingData.set(false);
-        this.activeTab.set('charts');
-        this.cdr.detectChanges();
+        forkJoin({
+          charts: this.loadChartsData(),
+          prediction: this.loadPrediction(),
+        }).subscribe({
+          next: () => {
+            this.uploadSuccess.set('تم رفع الملف وتجهيز البيانات بنجاح.');
+            this.activeTab.set('charts');
+            this.cdr.detectChanges();
+          },
+          error: () => {
+            this.uploadError.set('تم رفع الملف لكن تعذر تجهيز بعض البيانات.');
+          },
+          complete: () => {
+            this.isProcessingData.set(false);
+          },
+        });
       },
       error: () => {
         this.uploadError.set('فشل الرفع. يرجى المحاولة مرة أخرى.');
